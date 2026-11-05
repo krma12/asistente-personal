@@ -1,0 +1,58 @@
+"""
+Asistente personal — punto de entrada por consola.
+
+Un LLM (Gemini, Groq, Ollama o Claude) entiende la pregunta en lenguaje natural,
+decide qué herramienta usar, extrae los parámetros y redacta la respuesta final.
+
+El proveedor se elige en el archivo .env con LLM_PROVIDER (ver .env.example).
+La lógica de cada proveedor está en proveedores.py; las herramientas en herramientas.py.
+"""
+import sys
+
+from dotenv import load_dotenv
+
+from proveedores import crear_asistente
+
+load_dotenv()  # Lee LLM_PROVIDER y las claves desde el archivo .env
+
+SALIDAS = {"salir", "exit", "quit", "adiós", "adios"}
+
+
+def chatbot():
+    try:
+        asistente = crear_asistente()
+    except ValueError as e:
+        print(f"Error de configuración: {e}")
+        print("Copia .env.example como .env y completa los datos del proveedor que quieras usar.")
+        sys.exit(1)
+
+    print(f"*** Asistente personal v0.1 (proveedor: {asistente.nombre}, modelo: {asistente.modelo}) ***")
+    print("Pregúntame por el clima de cualquier ciudad o el precio de una acción.")
+    print("Ejemplos: '¿cómo está el clima en Denver?', '¿a cuánto está Nvidia?'")
+    print("Escribe 'salir' para terminar.\n")
+
+    while True:
+        try:
+            user_input = input("--> ").strip()
+            if not user_input:
+                continue
+            if user_input.lower() in SALIDAS:
+                print(">>> ¡Hasta luego!")
+                break
+            print(f">>> {asistente.preguntar(user_input)}\n")
+
+        except KeyboardInterrupt:
+            print("\n>>> ¡Hasta luego!")
+            break
+        except Exception as e:
+            # Errores de red, clave inválida, límite de uso alcanzado, modelo inexistente...
+            # (el asistente ya deshizo la pregunta fallida de su historial)
+            print(f">>> Error al consultar al modelo: {e}")
+            detalle = getattr(e, "body", None)  # el SDK guarda aquí la explicación del servidor
+            if detalle:
+                print(f"    Detalle: {detalle}")
+            print()
+
+
+if __name__ == "__main__":
+    chatbot()

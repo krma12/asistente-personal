@@ -1,0 +1,36 @@
+# PLANTILLA DE PERFIL (datos ficticios)
+# Copia este archivo como "perfil.yaml" y pon tus datos reales.
+# perfil.yaml NUNCA se sube a GitHub (está en .gitignore).
+# Comparte solo lo necesario para recomendar vacantes: nada de direcciones,
+# teléfonos ni documentos oficiales.
+
+nombre: Juan Pérez
+ubicacion: Ciudad de México, México
+disponibilidad: [remoto, híbrido]
+
+objetivo_profesional: >
+  Primer puesto en ciberseguridad o en desarrollo de software con IA.
+
+estudios:
+  - titulo: Ingeniería en Sistemas
+    institucion: Universidad Ejemplo
+    estado: en curso
+
+experiencia:
+  - puesto: Soporte técnico
+    años: 2
+
+habilidades: [Python, SQL, Linux, Git, redes, Kali Linux]
+certificaciones: [CompTIA Security+ (en preparación)]
+
+idiomas:
+  español: nativo
+  inglés: avanzado (C1)
+  portugués: intermedio (B1)   # sé realista: así no te recomienda puestos que exigen fluidez
+
+intereses_noticias: [ciberseguridad, inteligencia artificial, tecnología, geopolítica]
+
+busqueda_empleo:
+  regiones: [México, Latinoamérica, España, Brasil]
+  roles: [SOC Analyst Jr, Desarrollador Python Jr]
+  excluir: [ventas, call center]

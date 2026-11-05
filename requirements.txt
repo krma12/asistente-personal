@@ -1,0 +1,6 @@
+anthropic
+openai
+python-dotenv
+requests
+yfinance
+pytest

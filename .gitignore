@@ -1,0 +1,25 @@
+# ============================================================
+#  SECRETOS Y DATOS PERSONALES — NUNCA SUBIR A GITHUB
+# ============================================================
+.env
+perfil.yaml
+salidas/
+*.log
+cheetsheet
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+.bot/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Editores y sistema
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
