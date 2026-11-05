@@ -12,6 +12,7 @@ Para agregar una habilidad nueva (p. ej. obtener_noticias):
 """
 from funciones_agente.obtener_clima import obtener_clima
 from funciones_agente.obtener_precio_accion import obtener_precio_accion
+from funciones_agente.obtener_hora import obtener_hora
 
 TOOLS = [
     {
@@ -49,11 +50,32 @@ TOOLS = [
             "required": ["ticker"],
         },
     },
+    {
+        "name": "obtener_hora",
+        "description": (
+            "Obtiene la fecha, el día de la semana y la hora actual en una zona horaria. "
+            "Úsala cuando pregunten la hora o la fecha de un lugar, o cuando necesites saber "
+            "qué día es hoy. Convierte tú la ciudad o país a su zona IANA "
+            "(Beijing -> Asia/Shanghai, Madrid -> Europe/Madrid, São Paulo -> America/Sao_Paulo). "
+            "Si no indican lugar, usa America/Mexico_City."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "zona_horaria": {
+                    "type": "string",
+                    "description": "Nombre IANA de la zona horaria, p. ej. 'Asia/Shanghai'.",
+                }
+            },
+            "required": ["zona_horaria"],
+        },
+    },
 ]
 
 FUNCIONES = {
     "obtener_clima": obtener_clima,
     "obtener_precio_accion": obtener_precio_accion,
+    "obtener_hora": obtener_hora,
 }
 
 

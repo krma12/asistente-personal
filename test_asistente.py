@@ -15,6 +15,7 @@ import proveedores
 from proveedores import AsistenteClaude, AsistenteOpenAICompatible, crear_asistente
 from funciones_agente.obtener_clima import obtener_clima
 from funciones_agente.obtener_precio_accion import obtener_precio_accion, resolver_ticker
+from funciones_agente.obtener_hora import obtener_hora
 from herramientas import ejecutar_herramienta
 
 
@@ -61,6 +62,26 @@ def test_precio_accion(mock_ticker):
 def test_precio_accion_ticker_invalido(mock_ticker):
     mock_ticker.return_value.history.return_value = pd.DataFrame()
     assert "No se encontraron" in obtener_precio_accion("XXXX")
+
+
+# ---------- Hora ----------
+
+def test_hora_en_beijing():
+    from datetime import datetime, timezone
+    momento = datetime(2026, 11, 5, 3, 40, tzinfo=timezone.utc)  # 21:40 del 4 nov en CDMX
+    assert obtener_hora("Asia/Shanghai", ahora=momento) == (
+        "Asia/Shanghai: jueves 5 de noviembre de 2026, 11:40 (UTC+08:00)")
+
+
+def test_hora_en_cdmx_por_defecto():
+    from datetime import datetime, timezone
+    momento = datetime(2026, 11, 5, 3, 40, tzinfo=timezone.utc)
+    assert obtener_hora(ahora=momento) == (
+        "America/Mexico_City: miércoles 4 de noviembre de 2026, 21:40 (UTC-06:00)")
+
+
+def test_hora_zona_invalida():
+    assert obtener_hora("Marte/Base_Alfa").startswith("Error")
 
 
 # ---------- Registro de herramientas ----------

@@ -1,77 +1,94 @@
-# Asistente personal con IA
+# AI Personal Assistant
 
-Asistente de consola en Python que usa un LLM con *tool use* para responder con datos en tiempo real. La meta es convertirlo en un asistente diario: **noticias relevantes** (tecnología, ciberseguridad, IA, geopolítica) y **vacantes de empleo** alineadas con un perfil profesional, sin tener que buscarlas a mano.
+🌐 **English** · [Español](README.es.md)
 
-> Proyecto en desarrollo. Nació a partir de un ejercicio de clase de chatbots
-> ([automatizaci-n_simple](https://github.com/krma12/automatizaci-n_simple)) y evoluciona aquí como proyecto independiente.
+A Python console assistant that uses an LLM with *tool use* to answer with real-time data. The goal is a daily assistant that delivers **relevant news** (technology, cybersecurity, AI, geopolitics) and **job openings** matched to a professional profile, without searching by hand.
 
-![Flujo de tool use](docs/flujo_tool_use.png)
+> Work in progress. It started from a chatbot class exercise
+> ([automatizaci-n_simple](https://github.com/krma12/automatizaci-n_simple)) and continues here as an independent project.
 
-## Cómo funciona
+![Tool use flow](docs/flujo_tool_use.png)
 
-1. El usuario escribe una pregunta en lenguaje natural.
-2. El modelo decide si necesita una herramienta (clima, acciones, y próximamente noticias y vacantes).
-3. Python ejecuta la herramienta y le devuelve el resultado al modelo.
-4. El modelo redacta la respuesta final en español, sin inventar datos.
+## How it works
 
-## Proveedores de IA intercambiables
+1. The user asks a question in natural language.
+2. The model decides whether it needs a tool (weather, stocks, date and time, and soon news and job openings).
+3. Python runs the tool and sends the result back to the model.
+4. The model writes the final answer in Spanish without making up data.
 
-Se elige el modelo con una línea en `.env`, sin tocar el código:
+## Swappable AI providers
 
-| `LLM_PROVIDER` | Costo | Notas |
+Pick the model with one line in `.env`, no code changes:
+
+| `LLM_PROVIDER` | Cost | Notes |
 | --- | --- | --- |
-| `gemini` | Gratis con límites | Clave en Google AI Studio |
-| `groq` | Gratis con límites | Modelos abiertos, muy rápido |
-| `ollama` | Gratis, local | Los datos no salen de tu computadora |
-| `claude` | De pago | API de Anthropic |
+| `gemini` | Free with limits | Key from Google AI Studio |
+| `groq` | Free with limits | Open models, very fast |
+| `ollama` | Free, local | Data never leaves your computer |
+| `claude` | Paid | Anthropic API |
 
-`proveedores.py` tiene dos adaptadores: uno para la API nativa de Anthropic y otro para las API compatibles con OpenAI (Gemini, Groq, Ollama).
+`proveedores.py` has two adapters: one for Anthropic's native API and one for OpenAI-compatible APIs (Gemini, Groq, Ollama).
 
-## Hoja de ruta
+## Roadmap
 
-- [x] **Fase 1:** LLM con *tool use*, multi-proveedor, herramientas de clima y acciones, pruebas con `pytest`
-- [ ] **Fase 2:** herramienta de noticias desde fuentes RSS, filtradas por intereses
-- [ ] **Fase 3:** vacantes leídas desde alertas de empleo por correo y calificadas contra un perfil local (Iberoamérica, incluido Brasil)
-- [ ] **Fase 4:** resumen diario automático
+- [x] **Phase 1:** LLM with *tool use*, multi-provider, weather, stock, and time tools, `pytest` tests
+- [ ] **Phase 2:** news tool from RSS feeds, filtered by interests
+- [ ] **Phase 3:** job openings read from email job alerts and scored against a local profile (Ibero-America, including Brazil)
+- [ ] **Phase 4:** automatic daily briefing
 
-## Decisiones de diseño y seguridad
+Full details on bugs found, fixes, and decisions: [Progress report](docs/PROGRESS_REPORT.md).
 
-- **Sin scraping de LinkedIn ni Indeed:** sus términos de uso lo prohíben. Las vacantes se obtendrán de las alertas de empleo que esas plataformas envían por correo al propio usuario.
-- **Datos personales fuera del repositorio:** el perfil real (`perfil.yaml`), las claves (`.env`) y las salidas generadas están en `.gitignore`. El repo solo incluye plantillas con datos ficticios.
-- **Privacidad por proveedor:** para analizar el perfil personal se recomienda Ollama (local), porque los niveles gratuitos de algunas API pueden usar los datos enviados para mejorar sus productos.
-- **Compatibilidad real entre proveedores:** Gemini 3 exige recibir de vuelta una firma de razonamiento en cada llamada a herramienta. El adaptador conserva todos los campos de la respuesta en lugar de reconstruir los mensajes.
+## Design and security decisions
 
-## Instalación (Windows / PowerShell)
+- **No LinkedIn or Indeed scraping:** their terms of use prohibit it. Job openings will come from the job alerts those platforms email to the user.
+- **Personal data stays out of the repository:** the real profile (`perfil.yaml`), API keys (`.env`) and generated output are in `.gitignore`. The repo only ships templates with fictional data.
+- **Privacy per provider:** Ollama (local) is recommended for analyzing the personal profile, because some APIs' free tiers may use submitted data to improve their products.
+- **Real-world provider compatibility:** Gemini 3 requires a reasoning signature to be sent back with every tool call. The adapter keeps every field of the response instead of rebuilding messages by hand.
+
+## Setup (Windows / PowerShell)
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-copy .env.example .env          # elige LLM_PROVIDER y pon su clave
-copy perfil.example.yaml perfil.yaml   # (para la Fase 3) tus datos reales
+copy .env.example .env          # choose LLM_PROVIDER and add its key
+copy perfil.example.yaml perfil.yaml   # (for Phase 3) your real data
 python main.py
 ```
 
-## Pruebas
+## Tests
 
 ```powershell
 python -m pytest -v
 ```
 
-Las pruebas usan simulaciones (*mocks*): no necesitan internet ni gastan créditos de API.
+Tests use mocks: no internet connection or API credits needed.
 
-## Estructura
+## Structure
 
 ```
 asistente-personal/
-├── main.py                 # Conversación por consola
-├── proveedores.py          # Adaptadores de LLM + selección por .env
-├── herramientas.py         # Registro de herramientas (fichas JSON Schema)
-├── funciones_agente/       # Una habilidad por archivo
+├── main.py                 # Console conversation
+├── proveedores.py          # LLM adapters + provider selection via .env
+├── herramientas.py         # Tool registry (JSON Schema definitions)
+├── funciones_agente/       # One skill per file
 │   ├── obtener_clima.py
-│   └── obtener_precio_accion.py
+│   ├── obtener_precio_accion.py
+│   └── obtener_hora.py
 ├── test_asistente.py
-├── .env.example            # Plantilla de claves (sin datos reales)
-├── perfil.example.yaml     # Plantilla de perfil (datos ficticios)
+├── .env.example            # API key template (no real data)
+├── perfil.example.yaml     # Profile template (fictional data)
+├── README.es.md            # Spanish version
 └── docs/
+    ├── PROGRESS_REPORT.md  # Progress report (English)
+    ├── REPORTE_PROGRESO.md # Progress report (Spanish)
+    └── flujo_tool_use.png
 ```
+
+## Credits
+
+This project is based on [automatizaci-n_simple](https://github.com/mendiolaleonel2002-debug/automatizaci-n_simple) by mendiolaleonel2002-debug, the starter repository for an AI class exercise. It was first forked to [krma12/automatizaci-n_simple](https://github.com/krma12/automatizaci-n_simple), where v2.0 was built and submitted.
+
+- **Kept from the original:** the one-skill-per-file structure in `funciones_agente/`, and the use of wttr.in and yfinance.
+- **Rewritten:** the weather and stock functions, `main.py`, and the tests.
+- **New:** `proveedores.py`, `herramientas.py`, multi-provider support, and `.env` configuration.
