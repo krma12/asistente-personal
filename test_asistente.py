@@ -80,6 +80,18 @@ def test_hora_en_cdmx_por_defecto():
         "America/Mexico_City: miércoles 4 de noviembre de 2026, 21:40 (UTC-06:00)")
 
 
+def test_hora_respeta_horario_de_verano():
+    """La misma zona cambia de desfase según la fecha: lo resuelve tzdata, no el código."""
+    from datetime import datetime, timezone
+    invierno = datetime(2026, 1, 15, 12, 0, tzinfo=timezone.utc)
+    verano = datetime(2026, 7, 15, 12, 0, tzinfo=timezone.utc)
+    assert obtener_hora("Europe/Madrid", ahora=invierno).endswith("13:00 (UTC+01:00)")
+    assert obtener_hora("Europe/Madrid", ahora=verano).endswith("14:00 (UTC+02:00)")
+    # Tijuana sigue el horario de verano de EE. UU.; la Ciudad de México ya no lo usa
+    assert obtener_hora("America/Tijuana", ahora=verano).endswith("(UTC-07:00)")
+    assert obtener_hora("America/Mexico_City", ahora=verano).endswith("(UTC-06:00)")
+
+
 def test_hora_zona_invalida():
     assert obtener_hora("Marte/Base_Alfa").startswith("Error")
 

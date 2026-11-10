@@ -43,6 +43,6 @@ jobs:
       - name: Instalar herramientas
         run: pip install bandit pip-audit
       - name: Bandit (busca patrones inseguros en el código)
-        run: bandit -r . -x ./test_asistente.py
+        run: bandit -r . -x "./test_*.py"
       - name: pip-audit (busca dependencias con vulnerabilidades conocidas)
         run: pip-audit -r requirements.txt
