@@ -11,6 +11,7 @@ import sys
 
 from dotenv import load_dotenv
 
+from perfil import cargar_intereses
 from proveedores import crear_asistente
 
 load_dotenv()  # Lee LLM_PROVIDER y las claves desde el archivo .env
@@ -20,15 +21,18 @@ SALIDAS = {"salir", "exit", "quit", "adiós", "adios"}
 
 def chatbot():
     try:
-        asistente = crear_asistente()
+        intereses = cargar_intereses()
+        asistente = crear_asistente(intereses=intereses)
     except ValueError as e:
         print(f"Error de configuración: {e}")
         print("Copia .env.example como .env y completa los datos del proveedor que quieras usar.")
         sys.exit(1)
 
-    print(f"*** Asistente personal v0.1 (proveedor: {asistente.nombre}, modelo: {asistente.modelo}) ***")
-    print("Pregúntame por el clima de cualquier ciudad o el precio de una acción.")
-    print("Ejemplos: '¿cómo está el clima en Denver?', '¿a cuánto está Nvidia?'")
+    print(f"*** Asistente personal v0.2 (proveedor: {asistente.nombre}, modelo: {asistente.modelo}) ***")
+    print("Perfil: " + ("cargado desde perfil.yaml" if intereses else "no encontrado (respuestas sin personalizar)"))
+    print("Puedo darte clima, precios de acciones, la hora en cualquier lugar, noticias")
+    print("(ciberseguridad, IA, tecnología, geopolítica) y vulnerabilidades explotadas (CISA KEV).")
+    print("Ejemplos: '¿qué noticias hay hoy de ciberseguridad?', '¿hay CVE críticas esta semana?'")
     print("Escribe 'salir' para terminar.\n")
 
     while True:
