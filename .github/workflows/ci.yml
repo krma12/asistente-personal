@@ -1,0 +1,48 @@
+# Integración continua: se ejecuta en cada push y en cada pull request.
+# Corre las pruebas y dos análisis de seguridad. Si algo falla, GitHub lo marca en rojo.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:   # permite correrlo a mano desde la pestaña Actions
+
+# Mínimo privilegio: el flujo solo puede leer el código, no modificar el repo
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    name: Pruebas (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Ejecutar pruebas
+        run: python -m pytest -v
+
+  seguridad:
+    name: Análisis de seguridad
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Instalar herramientas
+        run: pip install bandit pip-audit
+      - name: Bandit (busca patrones inseguros en el código)
+        run: bandit -r . -x ./test_asistente.py
+      - name: pip-audit (busca dependencias con vulnerabilidades conocidas)
+        run: pip-audit -r requirements.txt

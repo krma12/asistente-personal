@@ -1,5 +1,7 @@
 # Asistente personal con IA
 
+[![CI](https://github.com/krma12/asistente-personal/actions/workflows/ci.yml/badge.svg)](https://github.com/krma12/asistente-personal/actions/workflows/ci.yml)
+
 🌐 [English](README.md) · **Español**
 
 Asistente de consola en Python que usa un LLM con *tool use* para responder con datos en tiempo real. La meta es convertirlo en un asistente diario: **noticias relevantes** (tecnología, ciberseguridad, IA, geopolítica) y **vacantes de empleo** alineadas con un perfil profesional, sin tener que buscarlas a mano.
@@ -43,13 +45,14 @@ Detalle de errores encontrados, correcciones y decisiones: [Reporte de progreso]
 - **Sin scraping de LinkedIn ni Indeed:** sus términos de uso lo prohíben. Las vacantes se obtendrán de las alertas de empleo que esas plataformas envían por correo al propio usuario.
 - **Datos personales fuera del repositorio:** el perfil real (`perfil.yaml`), las claves (`.env`) y las salidas generadas están en `.gitignore`. El repo solo incluye plantillas con datos ficticios.
 - **Privacidad por proveedor:** para analizar el perfil personal se recomienda Ollama (local), porque los niveles gratuitos de algunas API pueden usar los datos enviados para mejorar sus productos.
+- **Integración continua con revisiones de seguridad:** cada push corre las pruebas en Python 3.12 y 3.13, un análisis estático de seguridad con Bandit y una revisión de vulnerabilidades en dependencias con pip-audit. Dependabot propone actualizaciones semanales de librerías y de GitHub Actions.
 - **Compatibilidad real entre proveedores:** Gemini 3 exige recibir de vuelta una firma de razonamiento en cada llamada a herramienta. El adaptador conserva todos los campos de la respuesta en lugar de reconstruir los mensajes.
 
 ## Instalación (Windows / PowerShell)
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+python -m venv .bot
+.\.bot\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env          # elige LLM_PROVIDER y pon su clave
 copy perfil.example.yaml perfil.yaml   # (para la Fase 3) tus datos reales

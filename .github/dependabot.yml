@@ -1,0 +1,12 @@
+# Dependabot revisa cada semana si hay versiones nuevas (o parches de seguridad)
+# de las librerías de Python y de las acciones de GitHub, y abre un pull request.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
