@@ -1,9 +1,11 @@
-anthropic
-openai
-python-dotenv
-requests
-yfinance
-pytest
-tzdata
-feedparser
-pyyaml
+# Versiones fijas: instalaciones reproducibles y actualizaciones vía Dependabot.
+# Requiere Python 3.12 o superior.
+anthropic==2.8.0
+openai==3.49.0
+python-dotenv==1.2.4
+requests==2.34.2
+yfinance==1.8.0
+pytest==9.2.0
+tzdata==2026.6
+feedparser==6.0.14
+pyyaml==6.0.3
