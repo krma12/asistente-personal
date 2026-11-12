@@ -4,7 +4,7 @@
 
 🌐 **English** · [Español](README.es.md)
 
-A Python console assistant that uses an LLM with *tool use* to answer with real-time data. It already delivers **personalized news** (cybersecurity, AI, technology, geopolitics) and **actively exploited vulnerabilities** (CISA KEV). The goal is a daily assistant reachable from Telegram, with calendar reminders and **job openings** matched to a professional profile.
+A Python console assistant that uses an LLM with *tool use* to answer with real-time data. It already delivers **personalized news** (cybersecurity, AI, technology, geopolitics) and **actively exploited vulnerabilities** (CISA KEV). It runs as a **private Telegram bot** that asks every morning whether you want your news. Next: calendar reminders and **job openings** matched to a professional profile.
 
 > Work in progress. It started from a chatbot class exercise
 > ([automatizaci-n_simple](https://github.com/krma12/automatizaci-n_simple)) and continues here as an independent project.
@@ -35,7 +35,7 @@ Pick the model with one line in `.env`, no code changes:
 
 - [x] **Phase 1:** LLM with *tool use*, multi-provider, weather, stock, and time tools, `pytest` tests
 - [x] **Phase 2:** news from RSS feeds by topic, personalized with the local profile, plus CISA KEV vulnerabilities, with prompt-injection defenses
-- [ ] **Phase 3:** Telegram bot: chat from the phone and a morning prompt for the daily news
+- [x] **Phase 3:** private Telegram bot: chat from the phone and a morning prompt with a button for the daily news
 - [ ] **Phase 4:** Google Calendar reminders, days in advance, and reminders created by message
 - [ ] **Phase 5:** job openings read from email job alerts and scored against the local profile (Ibero-America, including Brazil)
 
@@ -44,6 +44,7 @@ Full details on bugs found, fixes, and decisions: [Progress report](docs/PROGRES
 ## Design and security decisions
 
 - **Prompt-injection defenses (OWASP LLM01):** news and CVE text is treated as untrusted data. It is stripped of HTML and control characters, truncated, wrapped in delimiters that external text cannot forge, and scanned for typical injection phrases, which are flagged to the user. Tests simulate real attacks.
+- **Private Telegram bot:** it only answers the chat ID set in `.env`; anyone else is ignored and only their ID is logged, never their message. The token is never printed (httpx request logging, which includes the token in the URL, is silenced).
 - **Least privilege:** every tool is read-only, and the model only picks a topic from a fixed list, never a URL (prevents SSRF). Any parameter not declared in a tool's schema is rejected.
 - **Safe downloads:** time and size limits on every request; one broken source never breaks the others.
 - **Data minimization:** only interests and career goal from `perfil.yaml` are sent to the model, loaded with `yaml.safe_load`.
@@ -55,14 +56,26 @@ Full details on bugs found, fixes, and decisions: [Progress report](docs/PROGRES
 
 ## Setup (Windows / PowerShell)
 
+Requires **Python 3.12 or newer** (3.13 recommended). Dependency versions are pinned in `requirements.txt` and kept up to date by Dependabot.
+
 ```powershell
-python -m venv .bot
+py -3.13 -m venv .bot
 .\.bot\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 copy .env.example .env          # choose LLM_PROVIDER and add its key
-copy perfil.example.yaml perfil.yaml   # (for Phase 3) your real data
+copy perfil.example.yaml perfil.yaml   # your real data (personalizes the news)
 python main.py
 ```
+
+### Telegram
+
+1. Create a bot with **@BotFather** and add `TELEGRAM_BOT_TOKEN` to `.env`.
+2. Run `python bot_telegram.py` and send `/start` to your bot: it replies with your chat ID.
+3. Add `TELEGRAM_CHAT_ID` to `.env` and restart the bot. From then on it only answers you.
+4. Optional: `HORA_RESUMEN` (default `08:00`) and `ZONA_HORARIA` (default `America/Mexico_City`).
+
+The bot runs while `bot_telegram.py` is running on your computer.
 
 ## Tests
 
@@ -87,8 +100,10 @@ asistente-personal/
 │   ├── obtener_vulnerabilidades.py  # CISA KEV
 │   └── contenido_externo.py         # Safe handling of untrusted content
 ├── perfil.py               # Reads interests from perfil.yaml
+├── bot_telegram.py         # Private Telegram bot
 ├── test_asistente.py
 ├── test_noticias.py        # Includes simulated injection attacks
+├── test_telegram.py        # Allowlist and bot behavior
 ├── .env.example            # API key template (no real data)
 ├── perfil.example.yaml     # Profile template (fictional data)
 ├── README.es.md            # Spanish version

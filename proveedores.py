@@ -39,11 +39,14 @@ SYSTEM_PROMPT = (
 )
 
 
-def construir_system_prompt(intereses: str | None = None) -> str:
-    """Prompt base + los intereses del perfil (si existe perfil.yaml)."""
-    if not intereses:
-        return SYSTEM_PROMPT
-    return SYSTEM_PROMPT + f"\n\nPERFIL DEL USUARIO: {intereses}"
+def construir_system_prompt(intereses: str | None = None, notas_extra: str | None = None) -> str:
+    """Prompt base + los intereses del perfil (si existe perfil.yaml) + notas del canal."""
+    prompt = SYSTEM_PROMPT
+    if intereses:
+        prompt += f"\n\nPERFIL DEL USUARIO: {intereses}"
+    if notas_extra:
+        prompt += f"\n\n{notas_extra}"
+    return prompt
 
 MAX_PASOS_HERRAMIENTAS = 5   # Evita ciclos infinitos si algo sale mal
 MAX_MENSAJES_HISTORIAL = 20  # Para no mandar conversaciones enormes a la API
@@ -244,9 +247,9 @@ class AsistenteOpenAICompatible:
 # ----------------------------------------------------------------------------
 # Fábrica: elige el proveedor según el .env
 # ----------------------------------------------------------------------------
-def crear_asistente(proveedor=None, modelo=None, intereses=None):
+def crear_asistente(proveedor=None, modelo=None, intereses=None, notas_extra=None):
     """Crea el asistente según LLM_PROVIDER. Lanza ValueError si falta configuración."""
-    system_prompt = construir_system_prompt(intereses)
+    system_prompt = construir_system_prompt(intereses, notas_extra)
     proveedor = (proveedor or os.getenv("LLM_PROVIDER", "gemini")).strip().lower()
     modelo = modelo or os.getenv("LLM_MODEL") or None
 
