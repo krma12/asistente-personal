@@ -4,7 +4,7 @@
 
 🌐 **English** · [Español](README.es.md)
 
-A Python console assistant that uses an LLM with *tool use* to answer with real-time data. It already delivers **personalized news** (cybersecurity, AI, technology, geopolitics) and **actively exploited vulnerabilities** (CISA KEV). It runs as a **private Telegram bot** that asks every morning whether you want your news. Next: calendar reminders and **job openings** matched to a professional profile.
+A Python console assistant that uses an LLM with *tool use* to answer with real-time data. It already delivers **personalized news** (cybersecurity, AI, technology, geopolitics) and **actively exploited vulnerabilities** (CISA KEV). It runs as a **private Telegram bot** that asks every morning whether you want your daily briefing (agenda + news), reads your **Google Calendar**, and creates reminders **only after you confirm them**. Next: **job openings** matched to a professional profile.
 
 > Work in progress. It started from a chatbot class exercise
 > ([automatizaci-n_simple](https://github.com/krma12/automatizaci-n_simple)) and continues here as an independent project.
@@ -14,7 +14,7 @@ A Python console assistant that uses an LLM with *tool use* to answer with real-
 ## How it works
 
 1. The user asks a question in natural language.
-2. The model decides whether it needs a tool: weather, stocks, date and time, news by topic, or exploited vulnerabilities.
+2. The model decides whether it needs a tool: weather, stocks, date and time, news by topic, exploited vulnerabilities, calendar agenda, or a reminder proposal.
 3. Python runs the tool and sends the result back to the model.
 4. The model writes the final answer in Spanish without making up data.
 
@@ -36,7 +36,7 @@ Pick the model with one line in `.env`, no code changes:
 - [x] **Phase 1:** LLM with *tool use*, multi-provider, weather, stock, and time tools, `pytest` tests
 - [x] **Phase 2:** news from RSS feeds by topic, personalized with the local profile, plus CISA KEV vulnerabilities, with prompt-injection defenses
 - [x] **Phase 3:** private Telegram bot: chat from the phone and a morning prompt with a button for the daily news
-- [ ] **Phase 4:** Google Calendar reminders, days in advance, and reminders created by message
+- [x] **Phase 4:** Google Calendar agenda in the daily briefing, and reminders created by message with notifications days in advance, always confirmed by the user
 - [ ] **Phase 5:** job openings read from email job alerts and scored against the local profile (Ibero-America, including Brazil)
 
 Full details on bugs found, fixes, and decisions: [Progress report](docs/PROGRESS_REPORT.md).
@@ -45,6 +45,8 @@ Full details on bugs found, fixes, and decisions: [Progress report](docs/PROGRES
 
 - **Prompt-injection defenses (OWASP LLM01):** news and CVE text is treated as untrusted data. It is stripped of HTML and control characters, truncated, wrapped in delimiters that external text cannot forge, and scanned for typical injection phrases, which are flagged to the user. Tests simulate real attacks.
 - **Private Telegram bot:** it only answers the chat ID set in `.env`; anyone else is ignored and only their ID is logged, never their message. The token is never printed (httpx request logging, which includes the token in the URL, is silenced).
+- **Human in the loop for writes:** creating a calendar event is the only write action, and the model can only *propose* it. Nothing is created until the user taps **Create** in Telegram (or types `s` in the console); there is deliberately no tool for the model to confirm. An injected instruction in a news item or a calendar invitation cannot create events on its own.
+- **Minimal Google scope:** only `calendar.events` (no Gmail, Drive or account settings). OAuth credentials and tokens live in `secretos/`, excluded from Git. Event titles are treated as untrusted content, since anyone can send you an invitation.
 - **Least privilege:** every tool is read-only, and the model only picks a topic from a fixed list, never a URL (prevents SSRF). Any parameter not declared in a tool's schema is rejected.
 - **Safe downloads:** time and size limits on every request; one broken source never breaks the others.
 - **Data minimization:** only interests and career goal from `perfil.yaml` are sent to the model, loaded with `yaml.safe_load`.
@@ -67,6 +69,14 @@ copy .env.example .env          # choose LLM_PROVIDER and add its key
 copy perfil.example.yaml perfil.yaml   # your real data (personalizes the news)
 python main.py
 ```
+
+### Google Calendar
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project and enable the **Google Calendar API**.
+2. Configure the **OAuth consent screen** (External) and add your own Google account as a test user.
+3. Create an **OAuth client ID** of type **Desktop app**, download the JSON and save it as `secretos/google_credentials.json`.
+4. Run `python configurar_calendario.py` once: it opens the browser to authorize access and saves `secretos/google_token.json`.
+5. While the consent screen is in **Testing**, Google expires the authorization every 7 days. To avoid re-authorizing weekly, switch the publishing status to **In production** (Google will show an "unverified app" warning, which is expected for a personal app) and run step 4 again.
 
 ### Telegram
 
@@ -98,12 +108,15 @@ asistente-personal/
 │   ├── obtener_hora.py
 │   ├── obtener_noticias.py          # RSS by topic (fixed allowlist)
 │   ├── obtener_vulnerabilidades.py  # CISA KEV
+│   ├── calendario.py                # Agenda + reminders with user confirmation
 │   └── contenido_externo.py         # Safe handling of untrusted content
 ├── perfil.py               # Reads interests from perfil.yaml
 ├── bot_telegram.py         # Private Telegram bot
+├── configurar_calendario.py # One-time Google Calendar authorization
 ├── test_asistente.py
 ├── test_noticias.py        # Includes simulated injection attacks
 ├── test_telegram.py        # Allowlist and bot behavior
+├── test_calendario.py      # Reminders only created after confirmation
 ├── .env.example            # API key template (no real data)
 ├── perfil.example.yaml     # Profile template (fictional data)
 ├── README.es.md            # Spanish version

@@ -131,7 +131,7 @@ def test_boton_si_pide_el_resumen():
 
 def test_error_del_modelo_da_mensaje_amable():
     ctx = contexto(config())
-    ctx.bot_data["asistente"].preguntar.side_effect = RuntimeError("429 límite")
+    ctx.bot_data["asistente"].preguntar.side_effect = RuntimeError("fallo desconocido")
     asyncio.run(bot.mensaje_texto(mensaje(MI_CHAT), ctx))
     assert "No pude responder" in ctx.bot.send_message.call_args.kwargs["text"]
 
@@ -164,3 +164,12 @@ def test_primer_uso_no_programa_pregunta_matutina():
 def test_prompt_de_telegram_pide_texto_plano():
     prompt = construir_system_prompt("temas de interés: IA", bot.NOTAS_TELEGRAM)
     assert "PERFIL DEL USUARIO" in prompt and "sin Markdown" in prompt
+
+
+def test_limite_de_la_api_da_mensaje_claro():
+    class RateLimitError(Exception):
+        pass
+    ctx = contexto(config())
+    ctx.bot_data["asistente"].preguntar.side_effect = RateLimitError("429 Too Many Requests")
+    asyncio.run(bot.mensaje_texto(mensaje(MI_CHAT), ctx))
+    assert "límite gratuito" in ctx.bot.send_message.call_args.kwargs["text"]

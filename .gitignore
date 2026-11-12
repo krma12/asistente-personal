@@ -6,6 +6,9 @@ perfil.yaml
 salidas/
 *.log
 cheetsheet
+secretos/
+credentials.json
+token.json
 
 # Entornos virtuales
 .venv/

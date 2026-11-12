@@ -203,3 +203,30 @@ def test_intereses_llegan_al_prompt():
     assert "PERFIL DEL USUARIO: temas de interés: ciberseguridad" in prompt
     asistente = proveedores.AsistenteOpenAICompatible("ollama", cliente=object(), system_prompt=prompt)
     assert asistente.system_prompt == prompt
+
+
+def test_resultados_viejos_se_compactan_en_el_historial():
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+
+    def respuesta(contenido=None, tool_calls=None):
+        return SimpleNamespace(choices=[SimpleNamespace(
+            message=SimpleNamespace(content=contenido, tool_calls=tool_calls))])
+
+    llamada = SimpleNamespace(id="c1", type="function",
+                              function=SimpleNamespace(name="obtener_hora", arguments="{}"))
+    cliente = MagicMock()
+    cliente.chat.completions.create.side_effect = [
+        respuesta(tool_calls=[llamada]), respuesta(contenido="Listo"),
+    ]
+    asistente = proveedores.AsistenteOpenAICompatible("groq", cliente=cliente)
+    import herramientas
+    original = herramientas.FUNCIONES["obtener_hora"]
+    try:
+        proveedores.ejecutar_herramienta = lambda nombre, args: "X" * 20000
+        asistente.preguntar("hora")
+    finally:
+        proveedores.ejecutar_herramienta = herramientas.ejecutar_herramienta
+        herramientas.FUNCIONES["obtener_hora"] = original
+    resultado = next(m for m in asistente.historial if m["role"] == "tool")["content"]
+    assert len(resultado) < 2000 and "recortado" in resultado

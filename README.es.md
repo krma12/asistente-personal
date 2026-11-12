@@ -4,7 +4,7 @@
 
 🌐 [English](README.md) · **Español**
 
-Asistente de consola en Python que usa un LLM con *tool use* para responder con datos en tiempo real. Ya ofrece **noticias personalizadas** (ciberseguridad, IA, tecnología, geopolítica) y **vulnerabilidades explotadas activamente** (CISA KEV). Funciona como un **bot privado de Telegram** que cada mañana te pregunta si quieres tus noticias. Lo siguiente: recordatorios del calendario y **vacantes de empleo** alineadas con un perfil profesional.
+Asistente de consola en Python que usa un LLM con *tool use* para responder con datos en tiempo real. Ya ofrece **noticias personalizadas** (ciberseguridad, IA, tecnología, geopolítica) y **vulnerabilidades explotadas activamente** (CISA KEV). Funciona como un **bot privado de Telegram** que cada mañana te pregunta si quieres tu resumen del día (agenda y noticias), lee tu **Google Calendar** y crea recordatorios **solo después de que los confirmas**. Lo siguiente: **vacantes de empleo** alineadas con un perfil profesional.
 
 > Proyecto en desarrollo. Nació a partir de un ejercicio de clase de chatbots
 > ([automatizaci-n_simple](https://github.com/krma12/automatizaci-n_simple)) y evoluciona aquí como proyecto independiente.
@@ -14,7 +14,7 @@ Asistente de consola en Python que usa un LLM con *tool use* para responder con 
 ## Cómo funciona
 
 1. El usuario escribe una pregunta en lenguaje natural.
-2. El modelo decide si necesita una herramienta: clima, acciones, fecha y hora, noticias por tema o vulnerabilidades explotadas.
+2. El modelo decide si necesita una herramienta: clima, acciones, fecha y hora, noticias por tema, vulnerabilidades explotadas, agenda del calendario o una propuesta de recordatorio.
 3. Python ejecuta la herramienta y le devuelve el resultado al modelo.
 4. El modelo redacta la respuesta final en español, sin inventar datos.
 
@@ -36,7 +36,7 @@ Se elige el modelo con una línea en `.env`, sin tocar el código:
 - [x] **Fase 1:** LLM con *tool use*, multi-proveedor, herramientas de clima, acciones y hora, pruebas con `pytest`
 - [x] **Fase 2:** noticias por tema desde fuentes RSS, personalizadas con el perfil local, más vulnerabilidades de CISA KEV, con defensas contra inyección de prompts
 - [x] **Fase 3:** bot privado de Telegram: conversar desde el celular y una pregunta cada mañana con un botón para recibir las noticias
-- [ ] **Fase 4:** recordatorios de Google Calendar con días de anticipación y recordatorios creados por mensaje
+- [x] **Fase 4:** agenda de Google Calendar en el resumen diario y recordatorios creados por mensaje, con avisos de días de anticipación, siempre confirmados por el usuario
 - [ ] **Fase 5:** vacantes leídas desde alertas de empleo por correo y calificadas contra el perfil local (Iberoamérica, incluido Brasil)
 
 Detalle de errores encontrados, correcciones y decisiones: [Reporte de progreso](docs/REPORTE_PROGRESO.md).
@@ -45,6 +45,8 @@ Detalle de errores encontrados, correcciones y decisiones: [Reporte de progreso]
 
 - **Defensas contra inyección de prompts (OWASP LLM01):** el texto de noticias y CVE se trata como datos no confiables. Se le quita el HTML y los caracteres de control, se recorta, se envuelve en delimitadores que el texto externo no puede falsificar y se revisa en busca de frases típicas de inyección, que se le señalan al usuario. Las pruebas simulan ataques reales.
 - **Bot de Telegram privado:** solo responde al ID de chat configurado en `.env`; a cualquier otra persona la ignora y solo registra su ID, nunca su mensaje. El token nunca se imprime (se silencia el registro de peticiones de httpx, que incluye el token en la URL).
+- **Confirmación humana para escribir:** crear un evento en el calendario es la única acción de escritura, y el modelo solo puede *proponerlo*. Nada se crea hasta que el usuario presiona **Crear** en Telegram (o escribe `s` en la consola); a propósito no existe una herramienta para que el modelo confirme. Una instrucción inyectada en una noticia o en una invitación de calendario no puede crear eventos por sí sola.
+- **Permiso mínimo de Google:** solo `calendar.events` (sin Gmail, Drive ni configuración de la cuenta). Las credenciales y tokens de OAuth viven en `secretos/`, excluida de Git. Los títulos de eventos se tratan como contenido no confiable, porque cualquiera puede enviarte una invitación.
 - **Mínimo privilegio:** todas las herramientas son de solo lectura, y el modelo solo elige un tema de una lista fija, nunca una URL (evita SSRF). Cualquier parámetro que no esté declarado en la ficha de una herramienta se rechaza.
 - **Descargas seguras:** límite de tiempo y de tamaño en cada petición; una fuente caída nunca tumba a las demás.
 - **Minimización de datos:** de `perfil.yaml` solo se envían al modelo los intereses y el objetivo profesional, cargados con `yaml.safe_load`.
@@ -67,6 +69,14 @@ copy .env.example .env          # elige LLM_PROVIDER y pon su clave
 copy perfil.example.yaml perfil.yaml   # tus datos reales (personaliza las noticias)
 python main.py
 ```
+
+### Google Calendar
+
+1. En [Google Cloud Console](https://console.cloud.google.com/), crea un proyecto y habilita la **Google Calendar API**.
+2. Configura la **pantalla de consentimiento OAuth** (Externa) y agrega tu propia cuenta de Google como usuario de prueba.
+3. Crea un **ID de cliente OAuth** de tipo **App de escritorio**, descarga el JSON y guárdalo como `secretos/google_credentials.json`.
+4. Ejecuta una vez `python configurar_calendario.py`: abre el navegador para autorizar el acceso y guarda `secretos/google_token.json`.
+5. Mientras la pantalla de consentimiento esté en **Prueba (Testing)**, Google vence la autorización cada 7 días. Para no reautorizar cada semana, cambia el estado de publicación a **En producción** (Google mostrará un aviso de "app no verificada", normal en una app personal) y repite el paso 4.
 
 ### Telegram
 
@@ -98,12 +108,15 @@ asistente-personal/
 │   ├── obtener_hora.py
 │   ├── obtener_noticias.py          # RSS por tema (lista blanca fija)
 │   ├── obtener_vulnerabilidades.py  # CISA KEV
+│   ├── calendario.py                # Agenda y recordatorios con confirmación
 │   └── contenido_externo.py         # Manejo seguro de contenido no confiable
 ├── perfil.py               # Lee los intereses de perfil.yaml
 ├── bot_telegram.py         # Bot privado de Telegram
+├── configurar_calendario.py # Autorización única de Google Calendar
 ├── test_asistente.py
 ├── test_noticias.py        # Incluye ataques de inyección simulados
 ├── test_telegram.py        # Lista blanca y comportamiento del bot
+├── test_calendario.py      # Recordatorios solo tras confirmación
 ├── .env.example            # Plantilla de claves (sin datos reales)
 ├── perfil.example.yaml     # Plantilla de perfil (datos ficticios)
 ├── README.md               # Versión en inglés

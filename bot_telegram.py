@@ -28,6 +28,7 @@ from telegram.ext import (
     Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters,
 )
 
+from funciones_agente import calendario
 from perfil import cargar_intereses
 from proveedores import crear_asistente
 
@@ -41,7 +42,8 @@ NOTAS_TELEGRAM = (
 )
 
 PEDIDO_RESUMEN = (
-    "Dame mi resumen de noticias de hoy: lo más relevante para mis intereses en "
+    "Dame mi resumen de hoy. Primero mi agenda de hoy y los próximos 3 días (si el calendario "
+    "no está configurado, omítela sin insistir). Después lo más relevante para mis intereses en "
     "ciberseguridad (incluye las vulnerabilidades explotadas recientes de CISA KEV), "
     "inteligencia artificial, tecnología y geopolítica. Máximo 3 noticias por tema."
 )
@@ -118,9 +120,23 @@ def dividir_mensaje(texto: str, limite: int = LIMITE_TELEGRAM) -> list[str]:
     return partes
 
 
+def mensaje_de_error(error: Exception) -> str:
+    """Explica el error en palabras simples, sin mostrar detalles internos."""
+    if type(error).__name__ == "RateLimitError" or "429" in str(error):
+        return ("Llegué al límite gratuito de peticiones por minuto del modelo de IA. "
+                "Espera uno o dos minutos y vuelve a intentarlo. Si pasa seguido, "
+                "pregunta por rangos de fechas más cortos.")
+    if type(error).__name__ in {"AuthenticationError", "PermissionDeniedError"}:
+        return "La clave de la API del modelo no es válida o expiró. Revisa tu archivo .env."
+    if type(error).__name__ in {"APIConnectionError", "APITimeoutError"}:
+        return "No pude conectarme al modelo de IA. Revisa tu conexión a internet."
+    return ("No pude responder ahora (error al consultar el modelo). "
+            "Si se repite, revisa la consola donde corre el bot.")
+
+
 def teclado_resumen() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("Sí, dame mis noticias", callback_data="resumen:si"),
+        InlineKeyboardButton("Sí, dame mi resumen", callback_data="resumen:si"),
         InlineKeyboardButton("Hoy no", callback_data="resumen:no"),
     ]])
 
@@ -135,10 +151,28 @@ async def preguntar_al_asistente(context: ContextTypes.DEFAULT_TYPE, chat_id: in
             respuesta = await asyncio.to_thread(asistente.preguntar, texto)
     except Exception as e:
         log.error("Error al consultar al modelo: %s", type(e).__name__)
-        respuesta = ("No pude responder ahora (error al consultar el modelo). "
-                     "Si se repite, revisa la consola donde corre el bot.")
+        respuesta = mensaje_de_error(e)
     for parte in dividir_mensaje(respuesta):
         await context.bot.send_message(chat_id=chat_id, text=parte, disable_web_page_preview=True)
+    await mostrar_recordatorios_pendientes(context, chat_id)
+
+
+def teclado_recordatorio(identificador: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("✅ Crear", callback_data=f"rec:si:{identificador}"),
+        InlineKeyboardButton("❌ Cancelar", callback_data=f"rec:no:{identificador}"),
+    ]])
+
+
+async def mostrar_recordatorios_pendientes(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
+    """Confirmación humana: cada recordatorio propuesto se muestra con botones Crear/Cancelar."""
+    ya_mostrados = context.bot_data.setdefault("recordatorios_mostrados", set())
+    for propuesta in calendario.pendientes():
+        if propuesta["id"] in ya_mostrados:
+            continue
+        ya_mostrados.add(propuesta["id"])
+        await context.bot.send_message(chat_id=chat_id, text=calendario.describir(propuesta),
+                                       reply_markup=teclado_recordatorio(propuesta["id"]))
 
 
 # ---------------------------------------------------------------------------
@@ -159,10 +193,12 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.effective_message.reply_text(
         "¡Hola! Soy tu asistente personal.\n\n"
         "Escríbeme lo que necesites: clima, precio de acciones, la hora en cualquier lugar, "
-        "noticias o vulnerabilidades explotadas.\n\n"
+        "noticias, vulnerabilidades explotadas, tu agenda o un recordatorio (por ejemplo: "
+        "'recuérdame el viernes a las 5 ir al banco'). Siempre te pediré confirmar antes de "
+        "crear algo en tu calendario.\n\n"
         f"Cada día a las {cfg.hora_resumen.strftime('%H:%M')} te preguntaré si quieres tu "
-        "resumen de noticias.\n\n"
-        "Comandos:\n/noticias – resumen de noticias ahora\n/reiniciar – borrar la conversación"
+        "resumen (agenda y noticias).\n\n"
+        "Comandos:\n/noticias – resumen de hoy (agenda y noticias)\n/reiniciar – borrar la conversación"
     )
 
 
@@ -189,16 +225,29 @@ async def boton_resumen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
     await consulta.answer()
     if consulta.data == "resumen:si":
-        await consulta.edit_message_text("¡Va! Buscando tus noticias…")
+        await consulta.edit_message_text("¡Va! Preparando tu resumen…")
         await preguntar_al_asistente(context, update.effective_chat.id, PEDIDO_RESUMEN)
     else:
         await consulta.edit_message_text("Está bien, hoy no. Si cambias de opinión, usa /noticias.")
 
 
+async def boton_recordatorio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    consulta = update.callback_query
+    await consulta.answer()
+    if not autorizado(update, context.bot_data["config"]):
+        return
+    _, decision, identificador = consulta.data.split(":")
+    if decision == "si":
+        resultado = await asyncio.to_thread(calendario.confirmar_recordatorio, identificador)
+    else:
+        resultado = calendario.descartar_recordatorio(identificador)
+    await consulta.edit_message_text(resultado, disable_web_page_preview=True)
+
+
 async def pregunta_matutina(context: ContextTypes.DEFAULT_TYPE) -> None:
     await context.bot.send_message(
         chat_id=context.job.chat_id,
-        text="¡Buenos días! ¿Quieres tu resumen de noticias de hoy?",
+        text="¡Buenos días! ¿Quieres tu resumen de hoy (agenda y noticias)?",
         reply_markup=teclado_resumen(),
     )
 
@@ -213,6 +262,7 @@ def construir_app(cfg: Config, asistente) -> Application:
     app.add_handler(CommandHandler("noticias", cmd_noticias))
     app.add_handler(CommandHandler("reiniciar", cmd_reiniciar))
     app.add_handler(CallbackQueryHandler(boton_resumen, pattern=r"^resumen:(si|no)$"))
+    app.add_handler(CallbackQueryHandler(boton_recordatorio, pattern=r"^rec:(si|no):[0-9a-f]{8}$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mensaje_texto))
     if cfg.chat_id is not None:
         app.job_queue.run_daily(pregunta_matutina, time=cfg.hora_resumen,
@@ -222,8 +272,10 @@ def construir_app(cfg: Config, asistente) -> Application:
 
 def main() -> None:
     logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO)
-    # httpx registra cada URL de la API, y la URL contiene el token: se silencia
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    # httpx registra cada URL de la API, y la URL de Telegram contiene el token: se silencia.
+    # (La librería de OpenAI usa httpx2, que también registra cada petición.)
+    for registro in ("httpx", "httpx2", "openai"):
+        logging.getLogger(registro).setLevel(logging.WARNING)
     load_dotenv()
 
     try:
