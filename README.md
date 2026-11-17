@@ -39,7 +39,7 @@ Pick the model with one line in `.env`, no code changes:
 - [x] **Phase 4:** Google Calendar agenda in the daily briefing, and reminders created by message with notifications days in advance, always confirmed by the user
 - [ ] **Phase 5:** job openings read from email job alerts and scored against the local profile (Ibero-America, including Brazil)
 
-Full details on bugs found, fixes, and decisions: [Progress report](docs/PROGRESS_REPORT.md).
+Full details on bugs found, fixes, and decisions: [Progress report](docs/PROGRESS_REPORT.md). Security design: [threat model](docs/THREAT_MODEL.md) and [security policy](SECURITY.md).
 
 ## Design and security decisions
 
@@ -122,6 +122,9 @@ asistente-personal/
 ├── README.es.md            # Spanish version
 └── docs/
     ├── PROGRESS_REPORT.md  # Progress report (English)
+    ├── THREAT_MODEL.md     # Threat model (English)
+    ├── MODELO_DE_AMENAZAS.md # Threat model (Spanish)
+    ├── SEGURIDAD.md        # Security policy (Spanish)
     ├── REPORTE_PROGRESO.md # Progress report (Spanish)
     └── flujo_tool_use.png
 ```

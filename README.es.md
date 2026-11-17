@@ -39,7 +39,7 @@ Se elige el modelo con una línea en `.env`, sin tocar el código:
 - [x] **Fase 4:** agenda de Google Calendar en el resumen diario y recordatorios creados por mensaje, con avisos de días de anticipación, siempre confirmados por el usuario
 - [ ] **Fase 5:** vacantes leídas desde alertas de empleo por correo y calificadas contra el perfil local (Iberoamérica, incluido Brasil)
 
-Detalle de errores encontrados, correcciones y decisiones: [Reporte de progreso](docs/REPORTE_PROGRESO.md).
+Detalle de errores encontrados, correcciones y decisiones: [Reporte de progreso](docs/REPORTE_PROGRESO.md). Diseño de seguridad: [modelo de amenazas](docs/MODELO_DE_AMENAZAS.md) y [política de seguridad](docs/SEGURIDAD.md).
 
 ## Decisiones de diseño y seguridad
 
@@ -122,6 +122,9 @@ asistente-personal/
 ├── README.md               # Versión en inglés
 └── docs/
     ├── REPORTE_PROGRESO.md # Reporte de progreso (español)
+    ├── MODELO_DE_AMENAZAS.md # Modelo de amenazas (español)
+    ├── SEGURIDAD.md        # Política de seguridad (español)
+    ├── THREAT_MODEL.md     # Modelo de amenazas (inglés)
     ├── PROGRESS_REPORT.md  # Reporte de progreso (inglés)
     └── flujo_tool_use.png
 ```

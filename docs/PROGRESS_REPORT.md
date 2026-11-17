@@ -1,16 +1,25 @@
-# Progress Report — Chatbot v2.0
+# Progress Report — AI Personal Assistant
 
 🌐 **English** · [Español](REPORTE_PROGRESO.md)
 
-November 4, 2026 · Hugo Maldonado Caballero
+Updated November 16, 2026 · Hugo Maldonado Caballero
 
 ## Summary
 
-The chatbot moved from recognizing phrases with regular expressions to using a language model with *tool use*, and it now answers through Gemini (free tier) from VS Code. Four bugs in the original code were fixed, support for 4 AI providers was added, and test coverage went from 1 test with no assertions to 18 automated tests.
+The class chatbot grew into a **private personal assistant** that runs as a Telegram bot: it delivers personalized news and actively exploited vulnerabilities (CISA KEV), reads the user's Google Calendar, and creates reminders only after the user confirms them. It has **95 automated tests**, runs on Python 3.13, and every push goes through tests, Bandit and pip-audit.
 
-- **Class goal:** fork the `automatizaci-n_simple` repository and build a chatbot from it.
-- **Personal goal:** turn it into a daily assistant for news (technology, cybersecurity, geopolitics) and for job openings matched to a professional profile.
-- **Status as of November 4, 2026:** Phase 1 implemented. Gemini answers general questions and uses the weather and stock tools; the 400 error was fixed and confirmed. Phase 1 was submitted in the class fork, and work continues in this repository, `asistente-personal`.
+- **Class goal:** fork the `automatizaci-n_simple` repository and build a chatbot from it (Phase 1, submitted).
+- **Personal goal:** a daily assistant for news, agenda and job openings matched to a professional profile.
+- **Status as of November 16, 2026:** Phases 1 to 4 done. Phase 5 (job openings) is being prepared: a dedicated mailbox now receives LinkedIn and Indeed job alerts.
+
+| Phase | What it added | Tests |
+| --- | --- | --- |
+| 4 — Calendar | Google Calendar agenda (up to one year) and reminders with human confirmation | 95 |
+| 3 — Telegram | Private bot with chat-ID allowlist and a morning briefing prompt | 66 |
+| 2 — News | RSS news by topic, CISA KEV, personalization, prompt-injection defenses | 44 |
+| 1 — LLM | Tool use, 4 providers, weather, stocks, time; class bugs fixed | 22 |
+
+The sections below document Phase 1 (the class project) in detail, followed by Phases 2 to 4.
 
 ## Code origin
 
@@ -134,14 +143,44 @@ automatizaci-n_simple/
 
 **Environment:** Windows, VS Code, project on an external SSD (`D:\Proyectos`), `.Bot` virtual environment.
 
+## Phases 2 to 4 (asistente-personal)
+
+### Phase 2 — News and threat intelligence
+- **News by topic** from a fixed list of RSS sources: cybersecurity, AI, technology and geopolitics (sources from several regions for balance).
+- **CISA KEV:** vulnerabilities with confirmed real-world exploitation, with an NVD link and a ransomware flag.
+- **Personalization:** only the interests and career goal from the local `perfil.yaml` are sent to the model.
+- **Prompt-injection defenses:** external text is cleaned, truncated, wrapped in unforgeable delimiters and scanned for injection phrases; the model only chooses topics, never URLs.
+
+### Phase 3 — Private Telegram bot
+- Only answers the configured chat ID; strangers are ignored and only their ID is logged.
+- Daily question at 08:00 with a button for the briefing; `/noticias` and `/reiniciar` commands.
+- The bot token is never printed (HTTP client logging is silenced because Telegram URLs contain it).
+
+### Phase 4 — Google Calendar
+- Reads the agenda (a specific day or up to one year, up to 300 events, paginated).
+- **Reminders with human confirmation:** the model can only propose; the event is created when the user taps **Create**. Notifications can be set days in advance.
+- Minimal Google scope (`calendar.events`); credentials in `secretos/`, excluded from Git.
+
+### Quality and security work
+- Python 3.13 (3.10 reached end of life), pinned dependencies, Dependabot.
+- CI in GitHub Actions: tests on 3.12 and 3.13, Bandit and pip-audit.
+- [Security policy](../SECURITY.md) and [threat model](THREAT_MODEL.md) mapped to the OWASP Top 10 for LLM applications.
+
+### Problems solved along the way
+
+| Problem | Cause | Solution |
+| --- | --- | --- |
+| Gemini returned **429 Too Many Requests** | A year-long agenda was resent in every message through the conversation history | Old tool results are trimmed in the history; compact agenda format; clear rate-limit message in Telegram |
+| Events after a certain date "did not exist" | The calendar query was capped at 25 events | Pagination up to 300 events, queries by specific date, warning when the list is truncated |
+| Google publishing blocked | The new Google Auth Platform asks for a home page and privacy policy to publish | Stay in Testing mode (authorization renewed every 7 days) |
+| Old virtual environment could not be deleted | Windows kept `python.exe` locked | New `.venv` with Python 3.13; delete the old one after a reboot |
+| Files reverted to old versions | VS Code saved open tabs over updated files | Close tabs and disable Auto Save before external edits |
+| CI in red after Phase 2 | Bandit flagged `assert` in the new test files | Exclude `test_*.py` from Bandit |
+
 ## Next steps
 
-Phase 1 is submitted; Phases 2 to 4 are developed in this public repository, with no personal data, as a portfolio project.
-
-- [x] Confirm the 400 error fix works with weather and stocks (confirmed November 4)
-- [x] Run `python -m pytest -v` and verify 18 green tests
-- [x] Check with `git status` that `.env`, `.Bot`, and `cheetsheet` don't show up; commit and push to the fork
-- [ ] **Phase 2, news:** `obtener_noticias` tool with RSS feeds for technology, cybersecurity, AI, and geopolitics
-- [ ] **Phase 3, job openings:** read LinkedIn and Indeed job alerts from Gmail (no scraping) and score them against a local `perfil.yaml`; coverage across Ibero-America, including Brazil, with a realistic Portuguese level
-- [ ] **Phase 4, daily use:** automatic morning briefing
-- [x] Create the new public repository (`asistente-personal`) with `.gitignore` and example templates from the first commit
+- [x] Phases 1 to 4
+- [x] Security policy and threat model
+- [ ] **Phase 5, job openings:** read the dedicated job-alert mailbox (LinkedIn and Indeed alerts redirected from Outlook) and score openings against the local profile; Ibero-America, including Brazil
+- [ ] Move the bot to a dedicated home server (Lenovo ThinkCentre M920q) and harden it
+- [ ] Optional: publish the Google OAuth app with a privacy page on GitHub Pages

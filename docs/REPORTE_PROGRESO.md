@@ -1,16 +1,25 @@
-# Reporte de progreso — Chatbot v2.0
+# Reporte de progreso — Asistente personal con IA
 
 🌐 [English](PROGRESS_REPORT.md) · **Español**
 
-4 de noviembre de 2026 · Hugo Maldonado Caballero
+Actualizado el 16 de noviembre de 2026 · Hugo Maldonado Caballero
 
 ## Resumen
 
-El chatbot pasó de reconocer frases con expresiones regulares a usar un modelo de lenguaje con *tool use*, y ya responde con Gemini (gratis) desde VS Code. Se corrigieron 4 errores del código original, se agregó soporte para 4 proveedores de IA y la cobertura de pruebas pasó de 1 prueba sin verificaciones a 18 pruebas automáticas.
+El chatbot de la clase creció hasta convertirse en un **asistente personal privado** que funciona como bot de Telegram: entrega noticias personalizadas y vulnerabilidades explotadas activamente (CISA KEV), lee el Google Calendar del usuario y crea recordatorios solo después de que el usuario los confirma. Tiene **95 pruebas automáticas**, corre en Python 3.13 y cada push pasa por pruebas, Bandit y pip-audit.
 
-- **Objetivo de la clase:** hacer fork del repositorio `automatizaci-n_simple` y construir un chatbot a partir de él.
-- **Objetivo personal:** convertirlo después en un asistente diario de noticias (tecnología, ciberseguridad, geopolítica) y de vacantes alineadas con el perfil profesional.
-- **Estado al 4 de noviembre de 2026:** Fase 1 implementada en `D:\Proyectos\automatizaci-n_simple`. Gemini ya responde preguntas generales y usa las herramientas de clima y acciones; el error 400 quedó corregido y confirmado. La Fase 1 se entregó en el fork de la clase y el trabajo continúa en este repositorio, `asistente-personal`.
+- **Objetivo de la clase:** hacer fork del repositorio `automatizaci-n_simple` y construir un chatbot a partir de él (Fase 1, entregada).
+- **Objetivo personal:** un asistente diario de noticias, agenda y vacantes alineadas con el perfil profesional.
+- **Estado al 16 de noviembre de 2026:** Fases 1 a 4 terminadas. Se prepara la Fase 5 (vacantes): un buzón dedicado ya recibe las alertas de empleo de LinkedIn e Indeed.
+
+| Fase | Qué agregó | Pruebas |
+| --- | --- | --- |
+| 4 — Calendario | Agenda de Google Calendar (hasta un año) y recordatorios con confirmación humana | 95 |
+| 3 — Telegram | Bot privado con lista blanca por ID de chat y pregunta matutina | 66 |
+| 2 — Noticias | Noticias RSS por tema, CISA KEV, personalización, defensas contra inyección | 44 |
+| 1 — LLM | *Tool use*, 4 proveedores, clima, acciones, hora; errores de la clase corregidos | 22 |
+
+Las secciones siguientes documentan a detalle la Fase 1 (el proyecto de la clase) y después las Fases 2 a 4.
 
 ## Origen del código
 
@@ -134,14 +143,44 @@ automatizaci-n_simple/
 
 **Entorno:** Windows, VS Code, proyecto en SSD externo (`D:\Proyectos`), entorno virtual `.Bot`.
 
+## Fases 2 a 4 (asistente-personal)
+
+### Fase 2 — Noticias e inteligencia de amenazas
+- **Noticias por tema** desde una lista fija de fuentes RSS: ciberseguridad, IA, tecnología y geopolítica (fuentes de varias regiones para un panorama balanceado).
+- **CISA KEV:** vulnerabilidades con explotación real confirmada, con enlace a NVD y aviso de uso en ransomware.
+- **Personalización:** al modelo solo se le envían los intereses y el objetivo profesional de `perfil.yaml`, que es local.
+- **Defensas contra inyección de prompts:** el texto externo se limpia, se recorta, se envuelve en delimitadores que no se pueden falsificar y se revisa en busca de frases de inyección; el modelo solo elige temas, nunca URLs.
+
+### Fase 3 — Bot privado de Telegram
+- Solo responde al ID de chat configurado; a los desconocidos los ignora y solo registra su ID.
+- Pregunta diaria a las 08:00 con un botón para el resumen; comandos `/noticias` y `/reiniciar`.
+- El token del bot nunca se imprime (se silencia el registro del cliente HTTP, porque las URL de Telegram lo contienen).
+
+### Fase 4 — Google Calendar
+- Lee la agenda (un día concreto o hasta un año, hasta 300 eventos, con paginación).
+- **Recordatorios con confirmación humana:** el modelo solo puede proponer; el evento se crea cuando el usuario presiona **Crear**. Los avisos pueden ser con días de anticipación.
+- Permiso mínimo de Google (`calendar.events`); credenciales en `secretos/`, excluida de Git.
+
+### Calidad y seguridad
+- Python 3.13 (la 3.10 llegó a su fin de vida), dependencias con versión fija y Dependabot.
+- CI en GitHub Actions: pruebas en 3.12 y 3.13, Bandit y pip-audit.
+- [Política de seguridad](SEGURIDAD.md) y [modelo de amenazas](MODELO_DE_AMENAZAS.md) alineados con el OWASP Top 10 para aplicaciones con LLM.
+
+### Problemas resueltos en el camino
+
+| Problema | Causa | Solución |
+| --- | --- | --- |
+| Gemini respondía **429 Too Many Requests** | Una agenda de un año se reenviaba en cada mensaje a través del historial | Se recortan los resultados viejos del historial; formato compacto de agenda; mensaje claro de límite en Telegram |
+| Los eventos a partir de cierta fecha "no existían" | La consulta del calendario tenía un tope de 25 eventos | Paginación hasta 300 eventos, consultas por fecha concreta y aviso cuando la lista se corta |
+| No se podía publicar la app de Google | La nueva Google Auth Platform pide página principal y política de privacidad para publicar | Seguir en modo Prueba (la autorización se renueva cada 7 días) |
+| No se podía borrar el entorno virtual viejo | Windows mantenía bloqueado `python.exe` | Nuevo `.venv` con Python 3.13; borrar el viejo después de reiniciar |
+| Archivos que regresaban a versiones viejas | VS Code guardaba pestañas abiertas encima de los archivos actualizados | Cerrar pestañas y desactivar Auto Save antes de editar desde fuera |
+| CI en rojo tras la Fase 2 | Bandit marcaba los `assert` de las pruebas nuevas | Excluir `test_*.py` de Bandit |
+
 ## Próximos pasos
 
-La Fase 1 está entregada; las fases 2 a 4 se desarrollan en este repositorio público, sin datos personales, como proyecto de portafolio.
-
-- [x] Confirmar que la corrección del error 400 funciona con clima y acciones (confirmado el 4 de noviembre)
-- [x] Correr `python -m pytest -v` y verificar 18 pruebas en verde
-- [x] Revisar con `git status` que `.env`, `.Bot` y `cheetsheet` no aparezcan; hacer commit y push al fork
-- [ ] **Fase 2, noticias:** herramienta `obtener_noticias` con fuentes RSS de tecnología, ciberseguridad, IA y geopolítica
-- [ ] **Fase 3, vacantes:** leer alertas de empleo de LinkedIn e Indeed desde Gmail (sin scraping) y calificarlas contra un `perfil.yaml` local; cobertura en Iberoamérica, incluido Brasil, con el nivel real de portugués
-- [ ] **Fase 4, uso diario:** resumen matutino automático
-- [x] Crear el repositorio público nuevo (`asistente-personal`) con `.gitignore` y plantillas de ejemplo desde el primer commit
+- [x] Fases 1 a 4
+- [x] Política de seguridad y modelo de amenazas
+- [ ] **Fase 5, vacantes:** leer el buzón dedicado de alertas de empleo (alertas de LinkedIn e Indeed redirigidas desde Outlook) y calificar las vacantes contra el perfil local; Iberoamérica, incluido Brasil
+- [ ] Mover el bot a un servidor dedicado en casa (Lenovo ThinkCentre M920q) y endurecerlo
+- [ ] Opcional: publicar la app de OAuth de Google con una página de privacidad en GitHub Pages
